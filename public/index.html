@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
+<script src="./fx.js" defer></script>
 </head>
 <body>
 <x-dc>
@@ -471,7 +472,7 @@ input,select,textarea,button{font-family:inherit}
             <input value="{{ name }}" onChange="{{ onName }}" placeholder="Як до вас звертатися" style="border:1px solid #D9DBD3;border-radius:6px;padding:13px 14px;font-size:16px;color:#17191C;background:#F6F7F3">
           </label>
           <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:#52564C">Телефон
-            <input value="{{ phone }}" onChange="{{ onPhone }}" type="tel" placeholder="+380" style="border:1px solid #D9DBD3;border-radius:6px;padding:13px 14px;font-size:16px;color:#17191C;background:#F6F7F3">
+            <input value="{{ phone }}" onChange="{{ onPhone }}" type="tel" inputmode="tel" autocomplete="tel" maxlength="17" placeholder="+380 __ ___ __ __" style="border:1px solid #D9DBD3;border-radius:6px;padding:13px 14px;font-size:16px;color:#17191C;background:#F6F7F3">
           </label>
           <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:#52564C">Модель
             <select value="{{ model }}" onChange="{{ onModel }}" style="border:1px solid #D9DBD3;border-radius:6px;padding:13px 14px;font-size:16px;color:#17191C;background:#F6F7F3">
@@ -510,7 +511,7 @@ input,select,textarea,button{font-family:inherit}
             <input value="{{ name }}" onChange="{{ onName }}" placeholder="Як до вас звертатися" style="border:1px solid #D9DBD3;border-radius:6px;padding:13px 14px;font-size:16px;color:#17191C;background:#F6F7F3">
           </label>
           <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:#52564C">Телефон
-            <input value="{{ phone }}" onChange="{{ onPhone }}" type="tel" placeholder="+380" style="border:1px solid #D9DBD3;border-radius:6px;padding:13px 14px;font-size:16px;color:#17191C;background:#F6F7F3">
+            <input value="{{ phone }}" onChange="{{ onPhone }}" type="tel" inputmode="tel" autocomplete="tel" maxlength="17" placeholder="+380 __ ___ __ __" style="border:1px solid #D9DBD3;border-radius:6px;padding:13px 14px;font-size:16px;color:#17191C;background:#F6F7F3">
           </label>
           <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:#52564C">Модель
             <select value="{{ model }}" onChange="{{ onModel }}" style="border:1px solid #D9DBD3;border-radius:6px;padding:13px 14px;font-size:16px;color:#17191C;background:#F6F7F3">
@@ -591,6 +592,21 @@ const FAQ = [
 const usd = n => n == null ? 'Ціна за запитом' : '$' + n.toLocaleString('uk-UA').replace(/\s/g, ' ');
 const fmtH = h => h >= 100 ? '99+ год' : (h < 10 ? h.toFixed(1) : Math.round(h)) + ' год';
 
+// +380 XX XXX XX XX
+function maskPhone(raw, prev) {
+  let d = raw.replace(/\D/g, '');
+  if (!d || '380'.startsWith(d)) return '';
+  const pd = prev.replace(/\D/g, '');
+  // backspace over a separator leaves the digits unchanged: drop one digit instead
+  if (raw.length < prev.length && d === pd) d = d.slice(0, -1);
+  if (d.startsWith('380')) d = d.slice(3);
+  else if (d.startsWith('80')) d = d.slice(2);
+  else if (d.startsWith('0')) d = d.slice(1);
+  d = d.slice(0, 9);
+  const parts = [d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean);
+  return '+380' + (parts.length ? ' ' + parts.join(' ') : ' ');
+}
+
 class Component extends DCLogic {
   state = { load: this.props.defaultLoad ?? 400, hours: 8, fmt: 'any', open: 0, name: '', phone: '', model: 'Ще не визначився', msg: '', sent: false, error: false, errorText: '', sending: false, modalOpen: false, menuOpen: false, w: typeof window !== 'undefined' ? window.innerWidth : 1200 };
 
@@ -609,8 +625,8 @@ class Component extends DCLogic {
   submit = async () => {
     const s = this.state;
     if (s.sending) return;
-    if (!s.name.trim() || s.phone.replace(/\D/g, '').length < 9) {
-      this.setState({ error: true, errorText: 'Вкажіть ім’я та коректний телефон.' });
+    if (!s.name.trim() || s.phone.replace(/\D/g, '').length < 12) {
+      this.setState({ error: true, errorText: 'Вкажіть ім’я та повний номер телефону.' });
       return;
     }
     this.setState({ sending: true, error: false });
@@ -662,7 +678,7 @@ class Component extends DCLogic {
       modelOpts: ['Ще не визначився', ...PRODUCTS.map(p => p.id)],
       name: s.name, phone: s.phone, model: s.model, msg: s.msg,
       onName: e => this.setState({ name: e.target.value }),
-      onPhone: e => this.setState({ phone: e.target.value }),
+      onPhone: e => this.setState({ phone: maskPhone(e.target.value, s.phone) }),
       onModel: e => this.setState({ model: e.target.value }),
       onMsg: e => this.setState({ msg: e.target.value }),
       error: s.error,
